@@ -22,5 +22,5 @@ object Logger:
         .clearHandlers()
         .clearModifiers()
         // causes junk to be logged 
-        .withHandler(minimumLevel = Some(scribe.Level.Debug))
+        .withHandler(minimumLevel = Some(scribe.Level.Info))
         .replace()

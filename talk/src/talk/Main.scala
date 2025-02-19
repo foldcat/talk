@@ -11,6 +11,8 @@ import org.maidagency.talk.router.*
 // abandon all hopes, ye who enters here
 
 object Main extends ZIOAppDefault:
+  override val bootstrap =
+    Runtime.enableLoomBasedExecutor ++ Runtime.enableLoomBasedBlockingExecutor
 
   val config = Server.Config.default
     .port(29834)

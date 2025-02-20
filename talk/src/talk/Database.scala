@@ -7,7 +7,8 @@ import org.maidagency.talk.generator.*
 
 case class Users[T[_]](
     id: T[Long],
-    name: T[String]
+    username: T[String],
+    password: T[String]
 )
 object Users extends Table[Users]
 
@@ -30,6 +31,7 @@ object Database:
         db.updateRaw("""
          CREATE TABLE users (
           id LONG PRIMARY KEY,
-          name VARCHAR(255)
+          username VARCHAR(255),
+          password VARCHAR(255)
          );
        """)

@@ -15,17 +15,9 @@ case class Router(
     Routes(
       Method.GET / Root -> handler(Response.text("-")),
       Method.POST / "api" / "register" ->
-        handler: (req: Request) =>
-          for
-            _ <- Logger.info("got register")
-            reg <- Register.register(req, dbclient)
-          yield reg,
-      Method.GET / "api" / "login" ->
-        handler: (req: Request) =>
-          for
-            _ <- Logger.info("got login")
-            response <- Login.login(req, dbclient, tokenStore)
-          yield response
+        handler(req => Register.register(req, dbclient)),
+      Method.POST / "api" / "login" ->
+        handler(req => Login.login(req, dbclient, tokenStore))
     )
 
 object Router:

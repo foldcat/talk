@@ -61,6 +61,9 @@ object Login:
   def mkErrJson(reason: String) =
     obj("success" -> false, "reason" -> reason).toString
 
+  def logSuccess(username: String) =
+    Logger.info(s"$username successfully logged in")
+
   def login(
       req: Request,
       dbconn: DataSource,
@@ -86,6 +89,7 @@ object Login:
         .map: token =>
           obj("success" -> true, "token" -> token).toString
         .map(Response.text(_))
+        .tap(_ => logSuccess(username))
     yield res
 
     response.catchAll: err =>

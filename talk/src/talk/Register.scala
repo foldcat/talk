@@ -1,10 +1,10 @@
 package org.maidagency.talk.register
 
+import fabric.*
 import org.maidagency.talk.database.*
 import org.maidagency.talk.generator.*
 import org.maidagency.talk.hashing.*
 import org.maidagency.talk.logging.*
-import fabric.*
 import scalasql.DbClient.*
 import scalasql.SqliteDialect.*
 import scalasql.Table
@@ -70,14 +70,18 @@ object Register:
           ZIO.succeed(value)
     yield RegObj(username, password)
 
+  def logSuccess(username: String) =
+    Logger.info(s"$username successfully registered")
+
   def register(req: Request, dbconn: DataSource) =
     req.body.asString
       .catchAll(_ => ZIO.fail(RegisterError.FailedToReadRequest))
       .map: result =>
         fabric.io.JsonParser(result, fabric.io.Format.Json)
       .flatMap(formatJson)
-      .tap((user: RegObj) => getUser(user.username, dbconn))
-      .tap((user: RegObj) => createUser(user, dbconn))
+      .tap(user => getUser(user.username, dbconn))
+      .tap(user => createUser(user, dbconn))
+      .tap(user => logSuccess(user.username))
       .map: _ =>
         Response.text(obj("success" -> true).toString())
       .catchAll: err => // if we somehow fail

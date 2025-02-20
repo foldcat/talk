@@ -84,20 +84,18 @@ object Register:
       .map: _ =>
         Response.text(obj("success" -> true).toString())
       .catchAll: err => // if we somehow fail
-        val (errorMsg, addInfo) = err match
-          case RegisterError.FailedToParseJson(input) =>
-            ("failed to parse json", Some(input))
+        val errorMsg = err match
+          case RegisterError.FailedToParseJson(_input) =>
+            "failed to parse json"
           case RegisterError.FailedToReadRequest =>
-            ("failed to read request", None)
+            "failed to read request"
           case RegisterError.DatabaseError =>
-            ("internal server error", None)
-          case RegisterError.UsernameExist(username) =>
-            ("username exists", Some(username))
+            "internal server error"
+          case RegisterError.UsernameExist(_username) =>
+            "username exists"
 
         ZIO
           .succeed(obj("success" -> false, "reason" -> errorMsg).toString())
           .map(Response.text(_))
           .tap: _ =>
-            Logger.error(
-              s"got an error while registering: $err, additionally $addInfo"
-            )
+            Logger.error(s"got an error while registering: $err")

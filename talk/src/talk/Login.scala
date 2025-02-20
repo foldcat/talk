@@ -93,18 +93,18 @@ object Login:
     yield res
 
     response.catchAll: err =>
-      val (errMsg, addInfo) = err match
+      val errMsg = err match
         case LoginError.IncorrectPassword(username) =>
-          ("incorrect password or username", Some(username))
+          "incorrect password or username"
         case LoginError.UserNotFound(username) =>
-          ("incorrect password or username", Some(username))
+          "incorrect password or username"
         case LoginError.DatabaseError =>
-          ("incorrect password or username", None)
+          "incorrect password or username"
         case LoginError.FailedToReadRequest =>
-          ("failed to read request", None)
+          "failed to read request"
         case LoginError.FailedToParseJson(json) =>
-          ("failed to parse json", Some(json))
+          "failed to parse json"
       ZIO
         .succeed(obj("success" -> false, "reason" -> errMsg).toString())
         .map(Response.text(_))
-        .tap(_ => Logger.error(s"login error $errMsg, additionally $addInfo"))
+        .tap(_ => Logger.error(s"login error $err"))

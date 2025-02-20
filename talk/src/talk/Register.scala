@@ -16,6 +16,7 @@ enum RegisterError:
   case FailedToReadRequest
   case DatabaseError
   case UsernameExist(username: String)
+  case FailedToHash
 
 case class RegObj(
     username: String,
@@ -26,7 +27,10 @@ object Register:
   def createUser(user: RegObj, dbconn: DataSource) =
     for
       id <- Generator.generateId()
-      hashed_password <- Hash.hash(user.password)
+
+      hashed_password <- Hash
+        .hash(user.password)
+        .catchAll(_ => ZIO.fail(RegisterError.FailedToHash))
 
       query = Users.insert.columns(
         _.username := user.username,
@@ -93,6 +97,8 @@ object Register:
             "internal server error"
           case RegisterError.UsernameExist(_username) =>
             "username exists"
+          case RegisterError.FailedToHash =>
+            "internal server error"
 
         ZIO
           .succeed(obj("success" -> false, "reason" -> errorMsg).toString())

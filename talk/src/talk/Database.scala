@@ -1,9 +1,9 @@
 package org.maidagency.talk.database
 
-import scalasql.Table
-import scalasql.H2Dialect.*
-import zio.*
 import org.maidagency.talk.generator.*
+import scalasql.H2Dialect.*
+import scalasql.Table
+import zio.*
 
 case class Users[T[_]](
     id: T[Long],

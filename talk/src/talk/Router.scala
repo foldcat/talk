@@ -1,9 +1,9 @@
 package org.maidagency.talk.router
 
-import zio.http.*
-import zio.*
 import org.maidagency.talk.logging.*
 import org.maidagency.talk.register.*
+import zio.*
+import zio.http.*
 
 case class Router(
     dbclient: scalasql.DbClient.DataSource

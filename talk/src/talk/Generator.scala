@@ -1,7 +1,7 @@
 package org.maidagency.talk.generator
 
-import zio.*
 import com.softwaremill.id.DefaultIdGenerator
+import zio.*
 
 object Generator:
   val generator = new DefaultIdGenerator

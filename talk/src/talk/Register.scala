@@ -1,14 +1,14 @@
 package org.maidagency.talk.register
 
-import zio.http.*
-import zio.*
-import org.maidagency.talk.logging.*
-import org.maidagency.talk.generator.*
 import org.maidagency.talk.database.*
+import org.maidagency.talk.generator.*
 import org.maidagency.talk.hashing.*
-import scalasql.Table
-import scalasql.SqliteDialect.*
+import org.maidagency.talk.logging.*
 import scalasql.DbClient.*
+import scalasql.SqliteDialect.*
+import scalasql.Table
+import zio.*
+import zio.http.*
 
 enum RegisterError:
   case FailedToParseJson

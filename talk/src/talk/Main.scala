@@ -1,12 +1,12 @@
 package org.maidagency.talk.main
 
-import zio.*
-import zio.Console.*
-import zio.http.*
-import org.maidagency.talk.logging.*
 import org.maidagency.talk.database.*
 import org.maidagency.talk.generator.*
+import org.maidagency.talk.logging.*
 import org.maidagency.talk.router.*
+import zio.Console.*
+import zio.*
+import zio.http.*
 
 // abandon all hopes, ye who enters here
 

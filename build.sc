@@ -1,8 +1,13 @@
+import $ivy.`com.goyeau::mill-scalafix::0.5.0`
+import com.goyeau.mill.scalafix.ScalafixModule
 import mill._
 import mill.scalalib._
 
-object talk extends ScalaModule {
+object talk extends ScalaModule with ScalafixModule {
   def scalaVersion = "3.4.2"
+  def scalafixIvyDeps = Agg(
+    ivy"com.nequissimus::sort-imports:0.6.1"
+  )
   def ivyDeps = Agg(
     ivy"dev.zio::zio:2.1.15",
     ivy"dev.zio::zio-http:3.0.1",

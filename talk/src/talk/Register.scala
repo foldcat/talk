@@ -4,6 +4,7 @@ import org.maidagency.talk.database.*
 import org.maidagency.talk.generator.*
 import org.maidagency.talk.hashing.*
 import org.maidagency.talk.logging.*
+import fabric.*
 import scalasql.DbClient.*
 import scalasql.SqliteDialect.*
 import scalasql.Table
@@ -47,15 +48,13 @@ object Register:
         ZIO
           .attemptBlocking(dbconn.transaction(db => db.run(query)))
           .catchAll(_ => ZIO.fail(RegisterError.DatabaseError))
-      .tap(_ => Logger.info("got user"))
       .flatMap: user =>
         if user.length == 1 then ZIO.fail(RegisterError.UsernameExist)
         else if user.length == 0 then ZIO.succeed(true)
         else ZIO.fail(RegisterError.DatabaseError)
-        // ^ probably demands a bug report on sql's front
-        // not enforcing primary key correctly...
-        // should NOT ever happen, i hope...
-      .tap(stat => Logger.info(s"$username search status: $stat"))
+    // ^ probably demands a bug report on sql's front
+    // not enforcing primary key correctly...
+    // should NOT ever happen, i hope...
 
   def formatJson(json: fabric.Json) =
     for // im sure theres a better way to do this
@@ -74,25 +73,24 @@ object Register:
   def register(req: Request, dbconn: DataSource) =
     req.body.asString
       .catchAll(_ => ZIO.fail(RegisterError.FailedToReadRequest))
-      .tap: req =>
-        Logger.info(req)
       .map: result =>
         fabric.io.JsonParser(result, fabric.io.Format.Json)
       .flatMap(formatJson)
       .tap((user: RegObj) => getUser(user.username, dbconn))
       .tap((user: RegObj) => createUser(user, dbconn))
       .map: _ =>
-        Response.text("registeration success")
+        Response.text(obj("success" -> true).toString())
       .catchAll: err => // if we somehow fail
-        val response = err match
+        val errorMsg = err match
           case RegisterError.FailedToParseJson =>
-            Response.text("failed to parse json")
+            "failed to parse json"
           case RegisterError.FailedToReadRequest =>
-            Response.text("failed to read request")
+            "failed to read request"
           case RegisterError.DatabaseError =>
-            Response.text("internal server error")
+            "internal server error"
           case RegisterError.UsernameExist =>
-            Response.text("username exists")
+            "username exists"
         ZIO
-          .succeed(response)
+          .succeed(obj("success" -> false, "reason" -> errorMsg).toString())
+          .map(Response.text(_))
           .tap(_ => Logger.error(s"got an error: $err"))

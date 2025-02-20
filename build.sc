@@ -8,6 +8,7 @@ object talk extends ScalaModule {
     ivy"dev.zio::zio-http:3.0.1",
     ivy"com.outr::scribe:3.16.0",
     ivy"com.outr::scribe-slf4j:3.16.0",
+    ivy"dev.zio::zio-logging-slf4j-bridge:2.4.0",
     ivy"com.softwaremill.common::id-generator:1.4.0",
     ivy"com.lihaoyi::scalasql:0.1.15",
     ivy"org.typelevel::fabric-core:1.15.9",

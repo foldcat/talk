@@ -19,6 +19,7 @@ enum LoginError:
   case UserNotFound(username: String)
   case FailedToReadRequest
   case FailedToParseJson(json: String)
+  case FailedToHash
 
 object Login:
   // you could ask scalasql to fetch only one data but it throws when
@@ -79,10 +80,17 @@ object Login:
             .catchAll(_ => ZIO.fail(LoginError.DatabaseError))
         .flatMap(getFirst(_, username))
         .tap: user => // failes the entire thing
-          ZIO.ifZIO(Hash.verify(password, user.password))(
-            onFalse = ZIO.fail(LoginError.IncorrectPassword(user.username)),
-            onTrue = ZIO.unit
-          )
+          ZIO
+            .ifZIO(
+              Hash
+                .verify(password, user.password)
+                // should NEVER pop
+                .catchAll(_ => ZIO.fail(LoginError.FailedToHash))
+            )(
+              onFalse = ZIO.fail(LoginError.IncorrectPassword(user.username)),
+              onTrue = ZIO.unit
+            )
+          // should NEVER pop
         .flatMap(_ => Generator.generateToken())
         .tap: token =>
           storeToken(username, token, storage)
@@ -104,6 +112,8 @@ object Login:
           "failed to read request"
         case LoginError.FailedToParseJson(json) =>
           "failed to parse json"
+        case LoginError.FailedToHash =>
+          "internal server error"
       ZIO
         .succeed(obj("success" -> false, "reason" -> errMsg).toString())
         .map(Response.text(_))

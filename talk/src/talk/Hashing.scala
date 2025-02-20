@@ -7,7 +7,7 @@ object Hash:
   val factory = Argon2PasswordFactory()
 
   def hash(password: String) =
-    ZIO.succeed(factory.hash(password))
+    ZIO.attemptBlocking(factory.hash(password))
 
   def verify(password: String, hash: String) =
-    ZIO.succeed(factory.verify(password, hash))
+    ZIO.attemptBlocking(factory.verify(password, hash))

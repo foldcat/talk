@@ -1,7 +1,7 @@
 package org.maidagency.talk.database
 
 import org.maidagency.talk.generator.*
-import scalasql.H2Dialect.*
+import scalasql.SqliteDialect.*
 import scalasql.Table
 import zio.*
 

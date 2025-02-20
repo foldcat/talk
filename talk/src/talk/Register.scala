@@ -12,10 +12,10 @@ import zio.*
 import zio.http.*
 
 enum RegisterError:
-  case FailedToParseJson
+  case FailedToParseJson(json: String)
   case FailedToReadRequest
   case DatabaseError
-  case UsernameExist
+  case UsernameExist(username: String)
 
 case class RegObj(
     username: String,
@@ -49,23 +49,24 @@ object Register:
           .attemptBlocking(dbconn.transaction(db => db.run(query)))
           .catchAll(_ => ZIO.fail(RegisterError.DatabaseError))
       .flatMap: user =>
-        if user.length == 1 then ZIO.fail(RegisterError.UsernameExist)
+        if user.length == 1 then ZIO.fail(RegisterError.UsernameExist(username))
         else if user.length == 0 then ZIO.succeed(true)
         else ZIO.fail(RegisterError.DatabaseError)
     // ^ probably demands a bug report on sql's front
     // not enforcing primary key correctly...
     // should NOT ever happen, i hope...
 
-  def formatJson(json: fabric.Json) =
+  def formatJson(input: String) =
     for // im sure theres a better way to do this
+      json <- ZIO.succeed(fabric.io.JsonParser(input, fabric.io.Format.Json))
       username <- json.get("username").map(_.asString) match
         case None =>
-          ZIO.fail(RegisterError.FailedToParseJson)
+          ZIO.fail(RegisterError.FailedToParseJson(input))
         case Some(value) =>
           ZIO.succeed(value)
       password <- json.get("password").map(_.asString) match
         case None =>
-          ZIO.fail(RegisterError.FailedToParseJson)
+          ZIO.fail(RegisterError.FailedToParseJson(input))
         case Some(value) =>
           ZIO.succeed(value)
     yield RegObj(username, password)
@@ -76,8 +77,6 @@ object Register:
   def register(req: Request, dbconn: DataSource) =
     req.body.asString
       .catchAll(_ => ZIO.fail(RegisterError.FailedToReadRequest))
-      .map: result =>
-        fabric.io.JsonParser(result, fabric.io.Format.Json)
       .flatMap(formatJson)
       .tap(user => getUser(user.username, dbconn))
       .tap(user => createUser(user, dbconn))
@@ -85,16 +84,20 @@ object Register:
       .map: _ =>
         Response.text(obj("success" -> true).toString())
       .catchAll: err => // if we somehow fail
-        val errorMsg = err match
-          case RegisterError.FailedToParseJson =>
-            "failed to parse json"
+        val (errorMsg, addInfo) = err match
+          case RegisterError.FailedToParseJson(input) =>
+            ("failed to parse json", Some(input))
           case RegisterError.FailedToReadRequest =>
-            "failed to read request"
+            ("failed to read request", None)
           case RegisterError.DatabaseError =>
-            "internal server error"
-          case RegisterError.UsernameExist =>
-            "username exists"
+            ("internal server error", None)
+          case RegisterError.UsernameExist(username) =>
+            ("username exists", Some(username))
+
         ZIO
           .succeed(obj("success" -> false, "reason" -> errorMsg).toString())
           .map(Response.text(_))
-          .tap(_ => Logger.error(s"got an error: $err"))
+          .tap: _ =>
+            Logger.error(
+              s"got an error while registering: $err, additionally $addInfo"
+            )

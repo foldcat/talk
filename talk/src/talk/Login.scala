@@ -14,20 +14,21 @@ import zio.concurrent.ConcurrentMap
 import zio.http.*
 
 enum LoginError:
-  case IncorrectPassword
+  case IncorrectPassword(username: String)
   case DatabaseError
-  case UserNotFound
+  case UserNotFound(username: String)
   case FailedToReadRequest
-  case FailedToParseJson
+  case FailedToParseJson(json: String)
 
 object Login:
   // you could ask scalasql to fetch only one data but it throws when
   // nothing is found so you gotta roll the below
   //
   // i don't even want to catch that assertion error
-  def getFirst[T](coll: Seq[T]) =
+  def getFirst[T](coll: Seq[T], searchTarget: String) =
     if coll.length == 1 then ZIO.succeed(coll.head)
-    else if coll.length == 0 then ZIO.fail(LoginError.UserNotFound)
+    else if coll.length == 0 then
+      ZIO.fail(LoginError.UserNotFound(searchTarget))
     else ZIO.fail(LoginError.DatabaseError)
 
   def storeToken(
@@ -37,16 +38,17 @@ object Login:
   ) =
     storage.put(token, username)
 
-  def formatJson(json: fabric.Json) =
-    for // im sure theres a better way to do this
+  def formatJson(input: String) =
+    for
+      json <- ZIO.succeed(fabric.io.JsonParser(input, fabric.io.Format.Json))
       username <- json.get("username").map(_.asString) match
         case None =>
-          ZIO.fail(LoginError.FailedToParseJson)
+          ZIO.fail(LoginError.FailedToParseJson(input))
         case Some(value) =>
           ZIO.succeed(value)
       password <- json.get("password").map(_.asString) match
         case None =>
-          ZIO.fail(LoginError.FailedToParseJson)
+          ZIO.fail(LoginError.FailedToParseJson(input))
         case Some(value) =>
           ZIO.succeed(value)
     yield (username, password)
@@ -54,8 +56,6 @@ object Login:
   def extractFields(req: Request) =
     req.body.asString
       .catchAll(_ => ZIO.fail(LoginError.FailedToReadRequest))
-      .map: result =>
-        fabric.io.JsonParser(result, fabric.io.Format.Json)
       .flatMap(formatJson)
 
   def mkErrJson(reason: String) =
@@ -77,10 +77,10 @@ object Login:
           ZIO
             .attemptBlocking(dbconn.transaction(db => db.run(query)))
             .catchAll(_ => ZIO.fail(LoginError.DatabaseError))
-        .flatMap(getFirst)
+        .flatMap(getFirst(_, username))
         .tap: user => // failes the entire thing
           ZIO.ifZIO(Hash.verify(password, user.password))(
-            onFalse = ZIO.fail(LoginError.IncorrectPassword),
+            onFalse = ZIO.fail(LoginError.IncorrectPassword(user.username)),
             onTrue = ZIO.unit
           )
         .flatMap(_ => Generator.generateToken())
@@ -93,15 +93,18 @@ object Login:
     yield res
 
     response.catchAll: err =>
-      val errJson = err match
-        case LoginError.IncorrectPassword =>
-          mkErrJson("incorrect password or username")
-        case LoginError.UserNotFound =>
-          mkErrJson("incorrect password or username")
+      val (errMsg, addInfo) = err match
+        case LoginError.IncorrectPassword(username) =>
+          ("incorrect password or username", Some(username))
+        case LoginError.UserNotFound(username) =>
+          ("incorrect password or username", Some(username))
         case LoginError.DatabaseError =>
-          mkErrJson("incorrect password or username")
+          ("incorrect password or username", None)
         case LoginError.FailedToReadRequest =>
-          mkErrJson("failed to read request")
-        case LoginError.FailedToParseJson =>
-          mkErrJson("failed to parse json")
-      ZIO.succeed(Response.text(errJson))
+          ("failed to read request", None)
+        case LoginError.FailedToParseJson(json) =>
+          ("failed to parse json", Some(json))
+      ZIO
+        .succeed(obj("success" -> false, "reason" -> errMsg).toString())
+        .map(Response.text(_))
+        .tap(_ => Logger.error(s"login error $errMsg, additionally $addInfo"))

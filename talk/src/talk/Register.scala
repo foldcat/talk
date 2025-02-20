@@ -24,7 +24,7 @@ case class RegObj(
 object Register:
   def createUser(user: RegObj, dbconn: DataSource) =
     for
-      id <- Generator.generate()
+      id <- Generator.generateId()
       hashed_password <- Hash.hash(user.password)
 
       query = Users.insert.columns(
@@ -72,12 +72,8 @@ object Register:
     yield RegObj(username, password)
 
   def register(req: Request, dbconn: DataSource) =
-    ZIO
-      .succeed(req)
-      .flatMap: req =>
-        req.body.asString.catchAll(_ =>
-          ZIO.fail(RegisterError.FailedToReadRequest)
-        )
+    req.body.asString
+      .catchAll(_ => ZIO.fail(RegisterError.FailedToReadRequest))
       .tap: req =>
         Logger.info(req)
       .map: result =>

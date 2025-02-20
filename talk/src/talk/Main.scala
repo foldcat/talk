@@ -6,6 +6,7 @@ import org.maidagency.talk.logging.*
 import org.maidagency.talk.router.*
 import zio.Console.*
 import zio.*
+import zio.concurrent.ConcurrentMap
 import zio.http.*
 
 // abandon all hopes, ye who enters here
@@ -28,13 +29,22 @@ object Main extends ZIOAppDefault:
       _ <- Logger.setup()
       _ <- Logger.info("starting talk")
 
-      dblayer = ZLayer.fromZIO:
+      dbLayer = ZLayer.fromZIO:
         Database
           .connect()
           .tap(Database.setup)
 
+      tokenStoreLayer = ZLayer.fromZIO:
+        ConcurrentMap.make[String, String]()
+
       // d*pendency injection
       _ <- ZIO
         .serviceWithZIO[Router](router => Server.serve(router.routes))
-        .provide(configLayer, Server.live, Router.layer, dblayer)
+        .provide(
+          configLayer,
+          Server.live,
+          Router.layer,
+          dbLayer,
+          tokenStoreLayer
+        )
     yield ()

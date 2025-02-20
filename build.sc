@@ -11,6 +11,7 @@ object talk extends ScalaModule with ScalafixModule {
   def ivyDeps = Agg(
     ivy"dev.zio::zio:2.1.15",
     ivy"dev.zio::zio-http:3.0.1",
+    ivy"dev.zio::zio-concurrent:2.1.15",
     ivy"com.outr::scribe:3.16.0",
     ivy"com.outr::scribe-slf4j:3.16.0",
     ivy"com.outr::scalapass:1.2.8",

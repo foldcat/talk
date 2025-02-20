@@ -90,7 +90,6 @@ object Login:
               onFalse = ZIO.fail(LoginError.IncorrectPassword(user.username)),
               onTrue = ZIO.unit
             )
-          // should NEVER pop
         .flatMap(_ => Generator.generateToken())
         .tap: token =>
           storeToken(username, token, storage)
